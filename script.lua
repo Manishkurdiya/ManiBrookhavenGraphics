@@ -1,595 +1,1065 @@
---[[
-    PRAKASH ANTI BANG GUI
-    - Modern Design
-    - Ultra Compact
-    - PC & Mobile Supported
-    - Smooth Animations
-    - Minimize/Close Features
-]]
+--============================================================
+-- 🌍 MANI GLOBE V2
+-- Single LocalScript
+-- Rayfield-style GUI
+--============================================================
 
-local GUI = {
-    SelectedPlayers = {},
-    TargetDistance = 50,
-    Smoothness = 0.5,
-    isRunning = false,
-    isMinimized = false,
-    loopConnection = nil
-}
+repeat task.wait() until game:IsLoaded()
 
--- Create Modern GUI
-local function CreateModernGUI()
-    local player = game.Players.LocalPlayer
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "PrakashAntiBangGUI"
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    -- Main Frame - MODERN & COMPACT
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 220, 0, 320)  -- Ultra compact
-    frame.Position = UDim2.new(0.5, -110, 0.5, -160)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
-    frame.BackgroundTransparency = 0.05
-    frame.BorderSizePixel = 0
-    frame.ClipsDescendants = true
-    frame.Parent = screenGui
-    
-    -- Modern Shadow Effect
-    local shadow = Instance.new("Frame")
-    shadow.Size = UDim2.new(1, 10, 1, 10)
-    shadow.Position = UDim2.new(0, -5, 0, -5)
-    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.BackgroundTransparency = 0.3
-    shadow.BorderSizePixel = 0
-    shadow.ZIndex = 0
-    shadow.Parent = frame
-    
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 12)
-    shadowCorner.Parent = shadow
-    
-    -- Main Corner
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 12)
-    mainCorner.Parent = frame
-    
-    -- Gradient Overlay
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 28, 35)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(30, 33, 42)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 28, 35))
-    })
-    gradient.Rotation = 45
-    gradient.Parent = frame
-    
-    -- Glow Border
-    local border = Instance.new("Frame")
-    border.Size = UDim2.new(1, 0, 1, 0)
-    border.Position = UDim2.new(0, 0, 0, 0)
-    border.BackgroundTransparency = 1
-    border.BorderSizePixel = 2
-    border.BorderColor3 = Color3.fromRGB(255, 180, 50)
-    border.ZIndex = 999
-    border.Parent = frame
-    
-    local borderCorner = Instance.new("UICorner")
-    borderCorner.CornerRadius = UDim.new(0, 12)
-    borderCorner.Parent = border
-    
-    -- Title Bar - MODERN
-    local titleFrame = Instance.new("Frame")
-    titleFrame.Size = UDim2.new(1, 0, 0, 32)
-    titleFrame.Position = UDim2.new(0, 0, 0, 0)
-    titleFrame.BackgroundColor3 = Color3.fromRGB(255, 180, 50)
-    titleFrame.BackgroundTransparency = 0.1
-    titleFrame.BorderSizePixel = 0
-    titleFrame.Parent = frame
-    
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
-    titleCorner.Parent = titleFrame
-    
-    -- Title Text
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(0.65, 0, 1, 0)
-    title.Position = UDim2.new(0.08, 0, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "⚡ PRAKASH"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextScaled = true
-    title.Font = Enum.Font.GothamBold
-    title.Parent = titleFrame
-    
-    -- Subtitle
-    local subTitle = Instance.new("TextLabel")
-    subTitle.Size = UDim2.new(0.5, 0, 0.6, 0)
-    subTitle.Position = UDim2.new(0.08, 0, 0.4, 0)
-    subTitle.BackgroundTransparency = 1
-    subTitle.Text = "ANTI BANG"
-    subTitle.TextColor3 = Color3.fromRGB(255, 200, 100)
-    subTitle.TextScaled = true
-    subTitle.Font = Enum.Font.Gotham
-    subTitle.TextTransparency = 0.5
-    subTitle.Parent = titleFrame
-    
-    -- Minimize Button
-    local minBtn = Instance.new("TextButton")
-    minBtn.Size = UDim2.new(0, 28, 0, 28)
-    minBtn.Position = UDim2.new(0.82, 0, 0.06, 0)
-    minBtn.BackgroundTransparency = 1
-    minBtn.Text = "─"
-    minBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    minBtn.TextScaled = true
-    minBtn.Font = Enum.Font.GothamBold
-    minBtn.Parent = titleFrame
-    
-    -- Close Button
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 28, 0, 28)
-    closeBtn.Position = UDim2.new(0.90, 0, 0.06, 0)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-    closeBtn.TextScaled = true
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Parent = titleFrame
-    
-    -- Content Frame (visible when not minimized)
-    local content = Instance.new("Frame")
-    content.Size = UDim2.new(1, 0, 1, -32)
-    content.Position = UDim2.new(0, 0, 0, 32)
-    content.BackgroundTransparency = 1
-    content.Parent = frame
-    
-    -- Player List - COMPACT
-    local playerBox = Instance.new("ScrollingFrame")
-    playerBox.Size = UDim2.new(0.92, 0, 0, 120)
-    playerBox.Position = UDim2.new(0.04, 0, 0.02, 0)
-    playerBox.BackgroundColor3 = Color3.fromRGB(30, 33, 42)
-    playerBox.BackgroundTransparency = 0.3
-    playerBox.BorderSizePixel = 1
-    playerBox.BorderColor3 = Color3.fromRGB(50, 55, 70)
-    playerBox.ScrollBarThickness = 3
-    playerBox.Parent = content
-    
-    local playerBoxCorner = Instance.new("UICorner")
-    playerBoxCorner.CornerRadius = UDim.new(0, 6)
-    playerBoxCorner.Parent = playerBox
-    
-    local playerList = Instance.new("UIListLayout")
-    playerList.Parent = playerBox
-    playerList.Padding = UDim.new(0, 2)
-    playerList.SortOrder = Enum.SortOrder.Name
-    
-    -- Distance Input - MODERN
-    local distFrame = Instance.new("Frame")
-    distFrame.Size = UDim2.new(0.92, 0, 0, 30)
-    distFrame.Position = UDim2.new(0.04, 0, 0.42, 0)
-    distFrame.BackgroundColor3 = Color3.fromRGB(30, 33, 42)
-    distFrame.BackgroundTransparency = 0.3
-    distFrame.BorderSizePixel = 1
-    distFrame.BorderColor3 = Color3.fromRGB(50, 55, 70)
-    distFrame.Parent = content
-    
-    local distCorner = Instance.new("UICorner")
-    distCorner.CornerRadius = UDim.new(0, 6)
-    distCorner.Parent = distFrame
-    
-    local distIcon = Instance.new("TextLabel")
-    distIcon.Size = UDim2.new(0.15, 0, 1, 0)
-    distIcon.Position = UDim2.new(0.02, 0, 0, 0)
-    distIcon.BackgroundTransparency = 1
-    distIcon.Text = "📏"
-    distIcon.TextScaled = true
-    distIcon.Font = Enum.Font.Gotham
-    distIcon.Parent = distFrame
-    
-    local distLabel = Instance.new("TextLabel")
-    distLabel.Size = UDim2.new(0.35, 0, 1, 0)
-    distLabel.Position = UDim2.new(0.18, 0, 0, 0)
-    distLabel.BackgroundTransparency = 1
-    distLabel.Text = "Dist: 50"
-    distLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    distLabel.TextScaled = true
-    distLabel.Font = Enum.Font.Gotham
-    distLabel.Parent = distFrame
-    
-    local distSlider = Instance.new("TextBox")
-    distSlider.Size = UDim2.new(0.3, 0, 0.8, 0)
-    distSlider.Position = UDim2.new(0.65, 0, 0.1, 0)
-    distSlider.BackgroundColor3 = Color3.fromRGB(40, 44, 55)
-    distSlider.Text = "50"
-    distSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-    distSlider.PlaceholderText = "0"
-    distSlider.ClearTextOnFocus = false
-    distSlider.TextScaled = true
-    distSlider.Font = Enum.Font.Gotham
-    distSlider.Parent = distFrame
-    
-    local distSliderCorner = Instance.new("UICorner")
-    distSliderCorner.CornerRadius = UDim.new(0, 4)
-    distSliderCorner.Parent = distSlider
-    
-    -- Buttons - MODERN
-    local btnFrame = Instance.new("Frame")
-    btnFrame.Size = UDim2.new(0.92, 0, 0, 35)
-    btnFrame.Position = UDim2.new(0.04, 0, 0.57, 0)
-    btnFrame.BackgroundTransparency = 1
-    btnFrame.Parent = content
-    
-    -- Start Button - GLOW EFFECT
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0.46, -3, 1, 0)
-    toggleBtn.Position = UDim2.new(0, 0, 0, 0)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-    toggleBtn.Text = "▶ START"
-    toggleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    toggleBtn.TextScaled = true
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.Parent = btnFrame
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 8)
-    toggleCorner.Parent = toggleBtn
-    
-    -- Start Button Glow
-    local toggleGlow = Instance.new("Frame")
-    toggleGlow.Size = UDim2.new(1, 4, 1, 4)
-    toggleGlow.Position = UDim2.new(0, -2, 0, -2)
-    toggleGlow.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-    toggleGlow.BackgroundTransparency = 0.5
-    toggleGlow.BorderSizePixel = 0
-    toggleGlow.ZIndex = 0
-    toggleGlow.Parent = toggleBtn
-    
-    local glowCorner = Instance.new("UICorner")
-    glowCorner.CornerRadius = UDim.new(0, 10)
-    glowCorner.Parent = toggleGlow
-    
-    -- Clear Button
-    local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(0.46, -3, 1, 0)
-    clearBtn.Position = UDim2.new(0.54, 0, 0, 0)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-    clearBtn.Text = "✖ CLEAR"
-    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearBtn.TextScaled = true
-    clearBtn.Font = Enum.Font.GothamBold
-    clearBtn.Parent = btnFrame
-    
-    local clearCorner = Instance.new("UICorner")
-    clearCorner.CornerRadius = UDim.new(0, 8)
-    clearCorner.Parent = clearBtn
-    
-    -- Refresh Button - MODERN
-    local refreshBtn = Instance.new("TextButton")
-    refreshBtn.Size = UDim2.new(0.92, 0, 0, 28)
-    refreshBtn.Position = UDim2.new(0.04, 0, 0.72, 0)
-    refreshBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 180)
-    refreshBtn.Text = "🔄 REFRESH"
-    refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    refreshBtn.TextScaled = true
-    refreshBtn.Font = Enum.Font.GothamBold
-    refreshBtn.Parent = content
-    
-    local refreshCorner = Instance.new("UICorner")
-    refreshCorner.CornerRadius = UDim.new(0, 8)
-    refreshCorner.Parent = refreshBtn
-    
-    -- Status Bar - MODERN
-    local statusFrame = Instance.new("Frame")
-    statusFrame.Size = UDim2.new(0.92, 0, 0, 24)
-    statusFrame.Position = UDim2.new(0.04, 0, 0.84, 0)
-    statusFrame.BackgroundColor3 = Color3.fromRGB(30, 33, 42)
-    statusFrame.BackgroundTransparency = 0.3
-    statusFrame.BorderSizePixel = 1
-    statusFrame.BorderColor3 = Color3.fromRGB(50, 55, 70)
-    statusFrame.Parent = content
-    
-    local statusCorner = Instance.new("UICorner")
-    statusCorner.CornerRadius = UDim.new(0, 6)
-    statusCorner.Parent = statusFrame
-    
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    statusLabel.Position = UDim2.new(0.03, 0, 0, 0)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "✅ Ready"
-    statusLabel.TextColor3 = Color3.fromRGB(150, 255, 150)
-    statusLabel.TextScaled = true
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.Parent = statusFrame
-    
-    local countLabel = Instance.new("TextLabel")
-    countLabel.Size = UDim2.new(0.3, 0, 1, 0)
-    countLabel.Position = UDim2.new(0.7, 0, 0, 0)
-    countLabel.BackgroundTransparency = 1
-    countLabel.Text = "👤 0"
-    countLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    countLabel.TextScaled = true
-    countLabel.Font = Enum.Font.Gotham
-    countLabel.Parent = statusFrame
-    
-    -- Title Bar Dragging
-    local dragging = false
-    local dragStart, startPos
-    
-    titleFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
-    
-    titleFrame.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
-                         input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    
-    titleFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-           input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    return {
-        GUI = screenGui,
-        Frame = frame,
-        Content = content,
-        PlayerList = playerBox,
-        PlayerListLayout = playerList,
-        DistLabel = distLabel,
-        DistSlider = distSlider,
-        ToggleBtn = toggleBtn,
-        ClearBtn = clearBtn,
-        RefreshBtn = refreshBtn,
-        StatusLabel = statusLabel,
-        CountLabel = countLabel,
-        MinBtn = minBtn,
-        CloseBtn = closeBtn,
-        TitleFrame = titleFrame,
-        ToggleGlow = toggleGlow
-    }
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+--============================================================
+-- CONFIG
+--============================================================
+
+local PROPS_FOLDER = "001_TrafficCones"
+
+local globeEnabled = false
+local cameraEnabled = false
+
+local globeRadius = 6
+local globeSpeed = 35
+local jumpPower = 50
+
+local globeCenter
+local originalPlayerPosition
+
+local cameraDistance = 18
+local cameraHeight = 7
+
+-- Movement smoothing
+local currentVelocity = Vector3.zero
+local targetVelocity = Vector3.zero
+
+-- Rotation
+local globeRotation = CFrame.identity
+
+-- Update limiter
+local UPDATE_RATE = 1 / 20
+local updateAccumulator = 0
+
+--============================================================
+-- FIND FOLDER
+--============================================================
+
+local workspaceCom = workspace:FindFirstChild("WorkspaceCom")
+
+if not workspaceCom then
+    warn("❌ WorkspaceCom not found")
+    return
 end
 
--- Update player list
-local function UpdatePlayerList(gui, selectedPlayers)
-    for _, child in ipairs(gui.PlayerList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    
-    local players = {}
-    local localPlayer = game.Players.LocalPlayer
-    
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer then
-            table.insert(players, player)
-        end
-    end
-    
-    table.sort(players, function(a, b) return a.Name < b.Name end)
-    
-    for _, player in ipairs(players) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -4, 0, 22)
-        btn.BackgroundColor3 = selectedPlayers[player] and Color3.fromRGB(0, 200, 80) or Color3.fromRGB(40, 44, 55)
-        btn.Text = selectedPlayers[player] and "✅ " .. player.Name or "⬜ " .. player.Name
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextScaled = true
-        btn.Font = Enum.Font.Gotham
-        btn.BackgroundTransparency = 0.1
-        btn.BorderSizePixel = 1
-        btn.BorderColor3 = Color3.fromRGB(50, 55, 70)
-        btn.Parent = gui.PlayerList
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 4)
-        btnCorner.Parent = btn
-        
-        btn.MouseButton1Click:Connect(function()
-            if selectedPlayers[player] then
-                selectedPlayers[player] = nil
-                btn.BackgroundColor3 = Color3.fromRGB(40, 44, 55)
-                btn.Text = "⬜ " .. player.Name
-            else
-                selectedPlayers[player] = true
-                btn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
-                btn.Text = "✅ " .. player.Name
-            end
-            
-            local count = 0
-            for _ in pairs(selectedPlayers) do count = count + 1 end
-            gui.CountLabel.Text = "👤 " .. count
-            gui.StatusLabel.Text = count > 0 and "✅ " .. count .. " selected" or "✅ Ready"
-        end)
-    end
-    
-    local count = 0
-    for _ in pairs(selectedPlayers) do count = count + 1 end
-    gui.CountLabel.Text = "👤 " .. count
-    gui.StatusLabel.Text = count > 0 and "✅ " .. count .. " selected" or "✅ Ready"
+local propsFolder = workspaceCom:FindFirstChild(PROPS_FOLDER)
+
+if not propsFolder then
+    warn("❌ 001_TrafficCones not found")
+    return
 end
 
--- Track distance function
-local function TrackDistance(selectedPlayers, targetDistance, smoothness)
-    local player = game.Players.LocalPlayer
-    local character = player.Character
-    if not character then return end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-    
-    local activePlayers = {}
-    for playerObj, _ in pairs(selectedPlayers) do
-        if playerObj and playerObj.Character then
-            local rootPart = playerObj.Character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                table.insert(activePlayers, rootPart)
-            end
+--============================================================
+-- GET PLAYER PROPS
+--============================================================
+
+local props = {}
+
+local function refreshProps()
+
+    table.clear(props)
+
+    for _, object in ipairs(propsFolder:GetChildren()) do
+
+        if string.find(object.Name, player.Name) then
+            table.insert(props, object)
         end
+
     end
-    
-    if #activePlayers == 0 then return end
-    
-    local avgPos = Vector3.new(0, 0, 0)
-    for _, rootPart in ipairs(activePlayers) do
-        avgPos = avgPos + rootPart.Position
-    end
-    avgPos = avgPos / #activePlayers
-    
-    local currentPos = humanoidRootPart.Position
-    local direction = (avgPos - currentPos).Unit
-    local currentDistance = (avgPos - currentPos).Magnitude
-    
-    if currentDistance > targetDistance + 3 or currentDistance < targetDistance - 3 then
-        local targetPos = avgPos - direction * targetDistance
-        targetPos = Vector3.new(targetPos.X, humanoidRootPart.Position.Y, targetPos.Z)
-        local newPos = currentPos:Lerp(targetPos, smoothness)
-        humanoidRootPart.CFrame = CFrame.new(newPos, avgPos)
-    end
+
+    print("🌍 Props:", #props)
 end
 
--- Main execution
-local function Main()
-    local selectedPlayers = {}
-    local isRunning = false
-    local loopConnection = nil
-    local isMinimized = false
-    
-    local gui = CreateModernGUI()
-    
-    -- Minimize button
-    gui.MinBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            gui.Content.Visible = false
-            gui.Frame.Size = UDim2.new(0, 220, 0, 32)
-            gui.MinBtn.Text = "□"
-            gui.StatusLabel.Text = "⏸ Minimized"
+refreshProps()
+
+if #props == 0 then
+    warn("❌ No player props found")
+end
+
+--============================================================
+-- PIVOT
+--============================================================
+
+local function getPivot(object)
+
+    if object:IsA("Model") then
+        return object:GetPivot()
+    end
+
+    if object:IsA("BasePart") then
+        return object.CFrame
+    end
+
+    return nil
+end
+
+--============================================================
+-- REMOTE
+--============================================================
+
+local function getRemote(object)
+
+    local remote = object:FindFirstChild("SetCurrentCFrame")
+
+    if remote and remote:IsA("RemoteFunction") then
+        return remote
+    end
+
+    remote = object:FindFirstChild("SetCurrentCFrame", true)
+
+    if remote and remote:IsA("RemoteFunction") then
+        return remote
+    end
+
+    return nil
+end
+
+--============================================================
+-- SPHERE DISTRIBUTION
+--============================================================
+
+local function createSpherePositions(count)
+
+    local result = {}
+
+    local goldenAngle = math.pi * (3 - math.sqrt(5))
+
+    for i = 1, count do
+
+        local y
+
+        if count == 1 then
+            y = 0
         else
-            gui.Content.Visible = true
-            gui.Frame.Size = UDim2.new(0, 220, 0, 320)
-            gui.MinBtn.Text = "─"
-            local count = 0
-            for _ in pairs(selectedPlayers) do count = count + 1 end
-            gui.StatusLabel.Text = count > 0 and "✅ " .. count .. " selected" or "✅ Ready"
+            y = 1 - ((i - 1) / (count - 1)) * 2
         end
-    end)
-    
-    -- Close button
-    gui.CloseBtn.MouseButton1Click:Connect(function()
-        if loopConnection then
-            loopConnection:Disconnect()
-            loopConnection = nil
+
+        local r = math.sqrt(
+            math.max(0, 1 - y * y)
+        )
+
+        local theta = goldenAngle * i
+
+        local x = math.cos(theta) * r
+        local z = math.sin(theta) * r
+
+        table.insert(
+            result,
+            Vector3.new(x, y, z)
+        )
+
+    end
+
+    return result
+end
+
+local spherePoints = createSpherePositions(
+    math.max(#props, 1)
+)
+
+--============================================================
+-- STORE OFFSETS
+--============================================================
+
+local propOffsets = {}
+
+local function generateOffsets()
+
+    table.clear(propOffsets)
+
+    for i, prop in ipairs(props) do
+
+        local point = spherePoints[i]
+
+        if point then
+
+            propOffsets[i] = {
+                direction = point.Unit,
+
+                -- random-looking but deterministic orientation
+                rotation = CFrame.Angles(
+                    math.rad((i * 37) % 360),
+                    math.rad((i * 71) % 360),
+                    math.rad((i * 19) % 360)
+                )
+            }
+
         end
-        gui.GUI:Destroy()
-    end)
-    
-    -- Distance slider
-    gui.DistSlider.FocusLost:Connect(function()
-        local num = tonumber(gui.DistSlider.Text)
-        if num and num > 0 and num < 1000 then
-            GUI.TargetDistance = num
-            gui.DistLabel.Text = "Dist: " .. num
-        else
-            gui.DistSlider.Text = tostring(GUI.TargetDistance)
-        end
-    end)
-    
-    -- Toggle button
-    gui.ToggleBtn.MouseButton1Click:Connect(function()
-        local playerCount = 0
-        for _ in pairs(selectedPlayers) do
-            playerCount = playerCount + 1
-        end
-        
-        if playerCount == 0 then
-            gui.StatusLabel.Text = "❌ Select player!"
-            gui.StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-            return
-        end
-        
-        isRunning = not isRunning
-        
-        if isRunning then
-            gui.ToggleBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-            gui.ToggleBtn.Text = "⏹ STOP"
-            gui.ToggleGlow.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-            gui.StatusLabel.Text = "🟢 Tracking " .. playerCount
-            gui.StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-            
-            loopConnection = game:GetService("RunService").Heartbeat:Connect(function()
-                TrackDistance(selectedPlayers, GUI.TargetDistance, GUI.Smoothness)
+
+    end
+end
+
+generateOffsets()
+
+--============================================================
+-- SET PROP
+--============================================================
+
+local function setProp(object, cf)
+
+    local remote = getRemote(object)
+
+    if remote then
+
+        task.spawn(function()
+
+            pcall(function()
+                remote:InvokeServer(cf)
             end)
-        else
-            gui.ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-            gui.ToggleBtn.Text = "▶ START"
-            gui.ToggleGlow.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-            gui.StatusLabel.Text = "⏹ Stopped"
-            gui.StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-            
-            if loopConnection then
-                loopConnection:Disconnect()
-                loopConnection = nil
-            end
+
+        end)
+
+        return
+    end
+
+    -- fallback only if client owns the object
+    pcall(function()
+
+        if object:IsA("Model") then
+            object:PivotTo(cf)
+
+        elseif object:IsA("BasePart") then
+            object.CFrame = cf
+
         end
+
     end)
-    
-    -- Clear button
-    gui.ClearBtn.MouseButton1Click:Connect(function()
-        for player, _ in pairs(selectedPlayers) do
-            selectedPlayers[player] = nil
-        end
-        UpdatePlayerList(gui, selectedPlayers)
-        gui.StatusLabel.Text = "✅ Cleared"
-        gui.StatusLabel.TextColor3 = Color3.fromRGB(200, 255, 200)
-        
-        if isRunning then
-            isRunning = false
-            gui.ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-             gui.ToggleBtn.Text = "▶ START"
-             gui.ToggleGlow.BackgroundColor3 = Color3.fromRGB(0, 220, 100)
-            if loopConnection then
-                loopConnection:Disconnect()
-                loopConnection = nil
-            end
-        end
-    end)
-    
-    -- Refresh button
-    gui.RefreshBtn.MouseButton1Click:Connect(function()
-        UpdatePlayerList(gui, selectedPlayers)
-        gui.StatusLabel.Text = "🔄 Refreshed!"
-        gui.StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-    end)
-    
-    -- Initial population
-    UpdatePlayerList(gui, selectedPlayers)
-    
-    -- Auto-refresh
-    game.Players.PlayerAdded:Connect(function()
-        UpdatePlayerList(gui, selectedPlayers)
-    end)
-    
-    game.Players.PlayerRemoving:Connect(function(player)
-        if selectedPlayers[player] then
-            selectedPlayers[player] = nil
-            UpdatePlayerList(gui, selectedPlayers)
-        end
-    end)
+
 end
 
--- Execute
-pcall(Main)
-        
+--============================================================
+-- BUILD GLOBE
+--============================================================
+
+local function buildGlobe()
+
+    if #props == 0 then
+        refreshProps()
+        generateOffsets()
+    end
+
+    if #props == 0 then
+        return
+    end
+
+    globeCenter = hrp.Position
+
+    globeRotation = CFrame.identity
+
+    -- Freeze actual player movement
+    humanoid.WalkSpeed = 0
+    humanoid.JumpPower = 0
+    humanoid.AutoRotate = false
+
+    for i, prop in ipairs(props) do
+
+        local data = propOffsets[i]
+
+        if data then
+
+            local direction =
+                data.direction
+
+            local position =
+                globeCenter +
+                direction * globeRadius
+
+            -- Keep surface objects pointing outward
+            local look =
+                CFrame.lookAt(
+                    position,
+                    globeCenter
+                )
+
+            local finalCF =
+                look * data.rotation
+
+            setProp(prop, finalCF)
+
+        end
+
+        task.wait(0.035)
+    end
+
+end
+
+--============================================================
+-- UPDATE GLOBE
+--============================================================
+
+local function updateGlobe()
+
+    if not globeEnabled then
+        return
+    end
+
+    if not globeCenter then
+        return
+    end
+
+    if #props == 0 then
+        return
+    end
+
+    local move =
+        humanoid.MoveDirection
+
+    --========================================================
+    -- CAMERA RELATIVE MOVEMENT
+    --========================================================
+
+    if move.Magnitude > 0.01 then
+
+        local camForward =
+            camera.CFrame.LookVector
+
+        local camRight =
+            camera.CFrame.RightVector
+
+        -- Flatten camera vectors
+        camForward = Vector3.new(
+            camForward.X,
+            0,
+            camForward.Z
+        )
+
+        camRight = Vector3.new(
+            camRight.X,
+            0,
+            camRight.Z
+        )
+
+        if camForward.Magnitude > 0 then
+            camForward = camForward.Unit
+        end
+
+        if camRight.Magnitude > 0 then
+            camRight = camRight.Unit
+        end
+
+        local desired =
+            camForward * (-move.Z) +
+            camRight * move.X
+
+        if desired.Magnitude > 0.01 then
+            desired = desired.Unit
+        end
+
+        targetVelocity =
+            desired * globeSpeed
+
+    else
+
+        targetVelocity =
+            Vector3.zero
+
+    end
+
+    --========================================================
+    -- SMOOTH ACCELERATION
+    --========================================================
+
+    currentVelocity =
+        currentVelocity:Lerp(
+            targetVelocity,
+            0.15
+        )
+
+    local dt = UPDATE_RATE
+
+    local movement =
+        currentVelocity * dt
+
+    globeCenter += movement
+
+    --========================================================
+    -- REALISTIC ROLL DIRECTION
+    --========================================================
+
+    local flatVelocity =
+        Vector3.new(
+            currentVelocity.X,
+            0,
+            currentVelocity.Z
+        )
+
+    if flatVelocity.Magnitude > 0.05 then
+
+        local direction =
+            flatVelocity.Unit
+
+        local rollAxis =
+            Vector3.new(
+                direction.Z,
+                0,
+                -direction.X
+            )
+
+        local angularAmount =
+            flatVelocity.Magnitude /
+            math.max(globeRadius, 0.1)
+
+        globeRotation =
+            CFrame.fromAxisAngle(
+                rollAxis,
+                angularAmount * dt
+            ) *
+            globeRotation
+
+    end
+
+    --========================================================
+    -- UPDATE PROPS
+    --========================================================
+
+    for i, prop in ipairs(props) do
+
+        local data =
+            propOffsets[i]
+
+        if data then
+
+            local rotated =
+                globeRotation:
+                VectorToWorldSpace(
+                    data.direction
+                )
+
+            local position =
+                globeCenter +
+                rotated * globeRadius
+
+            local look =
+                CFrame.lookAt(
+                    position,
+                    globeCenter
+                )
+
+            local finalCF =
+                look * data.rotation
+
+            setProp(
+                prop,
+                finalCF
+            )
+
+        end
+
+    end
+
+end
+
+--============================================================
+-- CAMERA
+--============================================================
+
+local cameraSmooth =
+    CFrame.new()
+
+local function updateCamera(dt)
+
+    if not globeEnabled or not cameraEnabled then
+        return
+    end
+
+    if not globeCenter then
+        return
+    end
+
+    -- Normal Roblox-like third person camera
+    local cameraFocus =
+        globeCenter
+
+    local offset =
+        Vector3.new(
+            0,
+            cameraHeight,
+            cameraDistance
+        )
+
+    local wantedPosition =
+        cameraFocus + offset
+
+    local wantedCF =
+        CFrame.lookAt(
+            wantedPosition,
+            cameraFocus
+        )
+
+    cameraSmooth =
+        cameraSmooth:Lerp(
+            wantedCF,
+            math.clamp(dt * 8, 0, 1)
+        )
+
+    camera.CameraType =
+        Enum.CameraType.Scriptable
+
+    camera.CFrame =
+        cameraSmooth
+
+end
+
+--============================================================
+-- ENABLE GLOBE
+--============================================================
+
+local function enableGlobe()
+
+    if globeEnabled then
+        return
+    end
+
+    refreshProps()
+    generateOffsets()
+
+    if #props == 0 then
+        return
+    end
+
+    globeEnabled = true
+
+    originalPlayerPosition =
+        hrp.CFrame
+
+    globeCenter =
+        hrp.Position
+
+    currentVelocity =
+        Vector3.zero
+
+    targetVelocity =
+        Vector3.zero
+
+    buildGlobe()
+
+    print("🌍 Globe enabled")
+
+end
+
+--============================================================
+-- DISABLE GLOBE
+--============================================================
+
+local function disableGlobe()
+
+    globeEnabled = false
+
+    currentVelocity =
+        Vector3.zero
+
+    targetVelocity =
+        Vector3.zero
+
+    humanoid.WalkSpeed = 16
+    humanoid.JumpPower = 50
+    humanoid.AutoRotate = true
+
+    camera.CameraType =
+        Enum.CameraType.Custom
+
+    camera.CameraSubject =
+        humanoid
+
+    print("🌍 Globe disabled")
+
+end
+
+--============================================================
+-- JUMP
+--============================================================
+
+local function globeJump()
+
+    if not globeEnabled then
+        return
+    end
+
+    -- Smooth vertical impulse
+    globeCenter +=
+        Vector3.new(
+            0,
+            jumpPower * 0.08,
+            0
+        )
+
+end
+
+--============================================================
+-- RAYFIELD LOAD
+--============================================================
+
+local Rayfield
+
+local success, loaded =
+    pcall(function()
+
+        return loadstring(
+            game:HttpGet(
+                "https://sirius.menu/rayfield"
+            )
+        )()
+
+    end)
+
+if not success or not loaded then
+
+    warn("❌ Rayfield failed")
+
+    return
+
+end
+
+Rayfield = loaded
+
+--============================================================
+-- WINDOW
+--============================================================
+
+local Window =
+    Rayfield:CreateWindow({
+
+        Name = "MANI GLOBE",
+
+        LoadingTitle =
+            "MANI GLOBE",
+
+        LoadingSubtitle =
+            "15 Prop Rolling System",
+
+        ConfigurationSaving = {
+            Enabled = false
+        },
+
+        Discord = {
+            Enabled = false
+        },
+
+        KeySystem = false
+
+    })
+
+--============================================================
+-- GLOBE TAB
+--============================================================
+
+local GlobeTab =
+    Window:CreateTab(
+        "🌍 Globe",
+        4483362458
+    )
+
+GlobeTab:CreateSection(
+    "Globe Controller"
+)
+
+--============================================================
+-- MASTER TOGGLE
+--============================================================
+
+GlobeTab:CreateToggle({
+
+    Name = "🌍 Globe Controller",
+
+    CurrentValue = false,
+
+    Flag = "GlobeController",
+
+    Callback = function(value)
+
+        if value then
+            enableGlobe()
+        else
+            disableGlobe()
+        end
+
+    end
+
+})
+
+--============================================================
+-- CAMERA TOGGLE
+--============================================================
+
+GlobeTab:CreateToggle({
+
+    Name = "🎥 Globe Camera",
+
+    CurrentValue = true,
+
+    Flag = "GlobeCamera",
+
+    Callback = function(value)
+
+        cameraEnabled = value
+
+        if not value then
+
+            camera.CameraType =
+                Enum.CameraType.Custom
+
+            camera.CameraSubject =
+                humanoid
+
+        elseif globeEnabled then
+
+            camera.CameraType =
+                Enum.CameraType.Scriptable
+
+        end
+
+    end
+
+})
+
+--============================================================
+-- SIZE
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "⚽ Globe Size",
+
+    Range = {
+        3,
+        15
+    },
+
+    Increment = 0.5,
+
+    Suffix = " studs",
+
+    CurrentValue = 6,
+
+    Flag = "GlobeSize",
+
+    Callback = function(value)
+
+        globeRadius = value
+
+        if globeEnabled then
+            buildGlobe()
+        end
+
+    end
+
+})
+
+--============================================================
+-- SPEED
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "🏃 Rolling Speed",
+
+    Range = {
+        5,
+        120
+    },
+
+    Increment = 5,
+
+    Suffix = " studs/s",
+
+    CurrentValue = 35,
+
+    Flag = "GlobeSpeed",
+
+    Callback = function(value)
+
+        globeSpeed = value
+
+    end
+
+})
+
+--============================================================
+-- JUMP
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "🚀 Jump Power",
+
+    Range = {
+        10,
+        100
+    },
+
+    Increment = 5,
+
+    Suffix = " power",
+
+    CurrentValue = 50,
+
+    Flag = "JumpPower",
+
+    Callback = function(value)
+
+        jumpPower = value
+
+    end
+
+})
+
+--============================================================
+-- CAMERA DISTANCE
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "📷 Camera Distance",
+
+    Range = {
+        8,
+        40
+    },
+
+    Increment = 1,
+
+    Suffix = " studs",
+
+    CurrentValue = 18,
+
+    Flag = "CameraDistance",
+
+    Callback = function(value)
+
+        cameraDistance = value
+
+    end
+
+})
+
+--============================================================
+-- CAMERA HEIGHT
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "📐 Camera Height",
+
+    Range = {
+        2,
+        20
+    },
+
+    Increment = 1,
+
+    Suffix = " studs",
+
+    CurrentValue = 7,
+
+    Flag = "CameraHeight",
+
+    Callback = function(value)
+
+        cameraHeight = value
+
+    end
+
+})
+
+--============================================================
+-- REBUILD
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🔄 Rebuild Globe",
+
+    Callback = function()
+
+        if globeEnabled then
+            buildGlobe()
+        else
+            refreshProps()
+            generateOffsets()
+        end
+
+    end
+
+})
+
+--============================================================
+-- REFRESH
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🔍 Refresh Props",
+
+    Callback = function()
+
+        refreshProps()
+        generateOffsets()
+
+        Rayfield:Notify({
+
+            Title = "🌍 Globe",
+
+            Content =
+                "Found " ..
+                tostring(#props) ..
+                " props.",
+
+            Duration = 3
+
+        })
+
+    end
+
+})
+
+--============================================================
+-- RESET
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "↩ Reset Camera",
+
+    Callback = function()
+
+        camera.CameraType =
+            Enum.CameraType.Custom
+
+        camera.CameraSubject =
+            humanoid
+
+        cameraEnabled = false
+
+    end
+
+})
+
+--============================================================
+-- INFO TAB
+--============================================================
+
+local InfoTab =
+    Window:CreateTab(
+        "ℹ Info",
+        4483362458
+    )
+
+InfoTab:CreateSection(
+    "Controls"
+)
+
+InfoTab:CreateParagraph({
+
+    Title = "🌍 How to use",
+
+    Content =
+        "1. Turn Globe Controller ON.\n\n" ..
+        "2. Use the normal Roblox mobile joystick.\n\n" ..
+        "3. Movement is camera-relative, so the globe can travel in 360° directions.\n\n" ..
+        "4. Change Globe Size / Speed / Jump.\n\n" ..
+        "5. Globe Camera gives a third-person globe-following view."
+
+})
+
+--============================================================
+-- INPUT
+--============================================================
+
+UserInputService.JumpRequest:Connect(function()
+
+    if globeEnabled then
+        globeJump()
+    end
+
+end)
+
+--============================================================
+-- MAIN LOOP
+--============================================================
+
+RunService.RenderStepped:Connect(function(dt)
+
+    if not globeEnabled then
+        return
+    end
+
+    updateAccumulator += dt
+
+    -- Keep updates consistent
+    if updateAccumulator >= UPDATE_RATE then
+
+        updateAccumulator = 0
+
+        updateGlobe()
+
+    end
+
+    updateCamera(dt)
+
+end)
+
+--============================================================
+-- CHARACTER RESPAWN
+--============================================================
+
+player.CharacterAdded:Connect(function(newCharacter)
+
+    character = newCharacter
+
+    humanoid =
+        character:WaitForChild(
+            "Humanoid"
+        )
+
+    hrp =
+        character:WaitForChild(
+            "HumanoidRootPart"
+        )
+
+    if globeEnabled then
+
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+        humanoid.AutoRotate = false
+
+    end
+
+end)
+
+--============================================================
+-- START
+--============================================================
+
+Rayfield:Notify({
+
+    Title = "🌍 MANI GLOBE",
+
+    Content =
+        "15-prop globe controller loaded!",
+
+    Duration = 4
+
+})
+
+print("======================================")
+print("🌍 MANI GLOBE V2 LOADED")
+print("Props:", #props)
+print("Camera-relative 360° movement: ON")
+print("======================================")
