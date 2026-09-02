@@ -1,12 +1,14 @@
 --============================================================
--- 🌍 MANI GLOBE V2
--- Single LocalScript
--- Rayfield-style GUI
+-- 🌍 MANI GLOBE V3
+-- SINGLE LOCALSCRIPT
 --============================================================
 
 repeat task.wait() until game:IsLoaded()
 
---// SERVICES
+--============================================================
+-- SERVICES
+--============================================================
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -19,37 +21,42 @@ local humanoid = character:WaitForChild("Humanoid")
 local hrp = character:WaitForChild("HumanoidRootPart")
 
 --============================================================
--- CONFIG
+-- SETTINGS
 --============================================================
 
-local PROPS_FOLDER = "001_TrafficCones"
+local GLOBE_RADIUS = 8
+local GLOBE_SPEED = 35
+local JUMP_POWER = 50
 
 local globeEnabled = false
 local cameraEnabled = false
 
-local globeRadius = 6
-local globeSpeed = 35
-local jumpPower = 50
+local globeCenter = nil
 
-local globeCenter
-local originalPlayerPosition
+-- Camera orbit
+local cameraYaw = 0
+local cameraPitch = math.rad(15)
 
-local cameraDistance = 18
-local cameraHeight = 7
+local cameraDistance = 20
+local cameraHeight = 3
 
--- Movement smoothing
-local currentVelocity = Vector3.zero
+local CAMERA_SENSITIVITY = 0.004
+local CAMERA_MIN_PITCH = math.rad(-70)
+local CAMERA_MAX_PITCH = math.rad(70)
+
+-- Movement
+local velocity = Vector3.zero
 local targetVelocity = Vector3.zero
 
 -- Rotation
 local globeRotation = CFrame.identity
 
--- Update limiter
-local UPDATE_RATE = 1 / 20
-local updateAccumulator = 0
+-- Remote update
+local UPDATE_INTERVAL = 1 / 15
+local updateTimer = 0
 
 --============================================================
--- FIND FOLDER
+-- FIND PROPS
 --============================================================
 
 local workspaceCom = workspace:FindFirstChild("WorkspaceCom")
@@ -59,16 +66,13 @@ if not workspaceCom then
     return
 end
 
-local propsFolder = workspaceCom:FindFirstChild(PROPS_FOLDER)
+local propsFolder =
+    workspaceCom:FindFirstChild("001_TrafficCones")
 
 if not propsFolder then
-    warn("❌ 001_TrafficCones not found")
+    warn("❌ 001_TrafficCones folder not found")
     return
 end
-
---============================================================
--- GET PLAYER PROPS
---============================================================
 
 local props = {}
 
@@ -76,145 +80,62 @@ local function refreshProps()
 
     table.clear(props)
 
-    for _, object in ipairs(propsFolder:GetChildren()) do
+    for _, obj in ipairs(propsFolder:GetChildren()) do
 
-        if string.find(object.Name, player.Name) then
-            table.insert(props, object)
+        if string.find(obj.Name, player.Name) then
+
+            if obj:IsA("Model") or obj:IsA("BasePart") then
+                table.insert(props, obj)
+            end
+
         end
 
     end
 
-    print("🌍 Props:", #props)
+    print("🌍 Found Props:", #props)
+
 end
 
 refreshProps()
 
-if #props == 0 then
-    warn("❌ No player props found")
-end
-
---============================================================
--- PIVOT
---============================================================
-
-local function getPivot(object)
-
-    if object:IsA("Model") then
-        return object:GetPivot()
-    end
-
-    if object:IsA("BasePart") then
-        return object.CFrame
-    end
-
-    return nil
+if #props < 15 then
+    warn(
+        "⚠ Only " ..
+        tostring(#props) ..
+        " props found. Expected 15."
+    )
 end
 
 --============================================================
 -- REMOTE
 --============================================================
 
-local function getRemote(object)
+local function findRemote(prop)
 
-    local remote = object:FindFirstChild("SetCurrentCFrame")
+    local remote =
+        prop:FindFirstChild("SetCurrentCFrame")
 
     if remote and remote:IsA("RemoteFunction") then
         return remote
     end
 
-    remote = object:FindFirstChild("SetCurrentCFrame", true)
+    remote =
+        prop:FindFirstChild(
+            "SetCurrentCFrame",
+            true
+        )
 
     if remote and remote:IsA("RemoteFunction") then
         return remote
     end
 
     return nil
+
 end
 
---============================================================
--- SPHERE DISTRIBUTION
---============================================================
+local function moveProp(prop, cf)
 
-local function createSpherePositions(count)
-
-    local result = {}
-
-    local goldenAngle = math.pi * (3 - math.sqrt(5))
-
-    for i = 1, count do
-
-        local y
-
-        if count == 1 then
-            y = 0
-        else
-            y = 1 - ((i - 1) / (count - 1)) * 2
-        end
-
-        local r = math.sqrt(
-            math.max(0, 1 - y * y)
-        )
-
-        local theta = goldenAngle * i
-
-        local x = math.cos(theta) * r
-        local z = math.sin(theta) * r
-
-        table.insert(
-            result,
-            Vector3.new(x, y, z)
-        )
-
-    end
-
-    return result
-end
-
-local spherePoints = createSpherePositions(
-    math.max(#props, 1)
-)
-
---============================================================
--- STORE OFFSETS
---============================================================
-
-local propOffsets = {}
-
-local function generateOffsets()
-
-    table.clear(propOffsets)
-
-    for i, prop in ipairs(props) do
-
-        local point = spherePoints[i]
-
-        if point then
-
-            propOffsets[i] = {
-                direction = point.Unit,
-
-                -- random-looking but deterministic orientation
-                rotation = CFrame.Angles(
-                    math.rad((i * 37) % 360),
-                    math.rad((i * 71) % 360),
-                    math.rad((i * 19) % 360)
-                )
-            }
-
-        end
-
-    end
-end
-
-generateOffsets()
-
---============================================================
--- SET PROP
---============================================================
-
-local function setProp(object, cf)
-
-    local remote = getRemote(object)
+    local remote = findRemote(prop)
 
     if remote then
 
@@ -226,144 +147,248 @@ local function setProp(object, cf)
 
         end)
 
-        return
+    else
+
+        pcall(function()
+
+            if prop:IsA("Model") then
+                prop:PivotTo(cf)
+
+            elseif prop:IsA("BasePart") then
+                prop.CFrame = cf
+
+            end
+
+        end)
+
     end
-
-    -- fallback only if client owns the object
-    pcall(function()
-
-        if object:IsA("Model") then
-            object:PivotTo(cf)
-
-        elseif object:IsA("BasePart") then
-            object.CFrame = cf
-
-        end
-
-    end)
 
 end
 
 --============================================================
--- BUILD GLOBE
+-- PERFECT 15-POINT GLOBE
+--============================================================
+
+-- Manually optimized 15-point spherical distribution.
+-- Better visual balance than simple top-to-bottom points.
+
+local SPHERE_POINTS = {
+
+    -- Top
+    Vector3.new(0, 1, 0),
+
+    -- Upper ring
+    Vector3.new(0.707, 0.55, 0),
+    Vector3.new(-0.354, 0.55, 0.612),
+    Vector3.new(-0.354, 0.55, -0.612),
+    Vector3.new(0.354, 0.55, 0.612),
+    Vector3.new(0.354, 0.55, -0.612),
+
+    -- Middle ring
+    Vector3.new(1, 0, 0),
+    Vector3.new(0.309, 0, 0.951),
+    Vector3.new(-0.809, 0, 0.588),
+    Vector3.new(-0.809, 0, -0.588),
+    Vector3.new(0.309, 0, -0.951),
+
+    -- Lower ring
+    Vector3.new(0.354, -0.55, 0.612),
+    Vector3.new(-0.354, -0.55, 0.612),
+    Vector3.new(-0.354, -0.55, -0.612),
+
+    -- Bottom
+    Vector3.new(0, -1, 0)
+}
+
+-- Normalize every point
+for i, point in ipairs(SPHERE_POINTS) do
+    SPHERE_POINTS[i] = point.Unit
+end
+
+--============================================================
+-- PROP ORIENTATION
+--============================================================
+
+local propRotations = {}
+
+for i = 1, 15 do
+
+    propRotations[i] =
+        CFrame.Angles(
+            math.rad((i * 47) % 360),
+            math.rad((i * 83) % 360),
+            math.rad((i * 29) % 360)
+        )
+
+end
+
+--============================================================
+-- PLACE GLOBE
+--============================================================
+
+local function placeGlobe()
+
+    if #props == 0 then
+        return
+    end
+
+    if not globeCenter then
+        globeCenter = hrp.Position
+    end
+
+    for i, prop in ipairs(props) do
+
+        local point =
+            SPHERE_POINTS[
+                ((i - 1) % #SPHERE_POINTS) + 1
+            ]
+
+        local rotated =
+            globeRotation:
+            VectorToWorldSpace(point)
+
+        local position =
+            globeCenter +
+            rotated * GLOBE_RADIUS
+
+        -- Point toward globe center
+        local cf =
+            CFrame.lookAt(
+                position,
+                globeCenter
+            )
+
+        -- Preserve prop-specific rotation
+        if propRotations[i] then
+            cf =
+                cf *
+                propRotations[i]
+        end
+
+        moveProp(
+            prop,
+            cf
+        )
+
+    end
+
+end
+
+--============================================================
+-- BUILD
 --============================================================
 
 local function buildGlobe()
 
-    if #props == 0 then
-        refreshProps()
-        generateOffsets()
-    end
+    refreshProps()
 
     if #props == 0 then
         return
     end
 
-    globeCenter = hrp.Position
+    globeCenter =
+        hrp.Position
 
-    globeRotation = CFrame.identity
+    globeRotation =
+        CFrame.identity
 
-    -- Freeze actual player movement
+    velocity =
+        Vector3.zero
+
+    targetVelocity =
+        Vector3.zero
+
+    -- Player stays at current location
     humanoid.WalkSpeed = 0
     humanoid.JumpPower = 0
     humanoid.AutoRotate = false
 
-    for i, prop in ipairs(props) do
-
-        local data = propOffsets[i]
-
-        if data then
-
-            local direction =
-                data.direction
-
-            local position =
-                globeCenter +
-                direction * globeRadius
-
-            -- Keep surface objects pointing outward
-            local look =
-                CFrame.lookAt(
-                    position,
-                    globeCenter
-                )
-
-            local finalCF =
-                look * data.rotation
-
-            setProp(prop, finalCF)
-
-        end
-
-        task.wait(0.035)
-    end
+    placeGlobe()
 
 end
 
 --============================================================
--- UPDATE GLOBE
+-- CAMERA-RELATIVE MOVEMENT
 --============================================================
 
-local function updateGlobe()
+local function getMovementDirection()
+
+    local move =
+        humanoid.MoveDirection
+
+    if move.Magnitude < 0.01 then
+        return Vector3.zero
+    end
+
+    -- Camera forward/right
+    local forward =
+        camera.CFrame.LookVector
+
+    local right =
+        camera.CFrame.RightVector
+
+    -- Flatten
+    forward =
+        Vector3.new(
+            forward.X,
+            0,
+            forward.Z
+        )
+
+    right =
+        Vector3.new(
+            right.X,
+            0,
+            right.Z
+        )
+
+    if forward.Magnitude > 0 then
+        forward = forward.Unit
+    end
+
+    if right.Magnitude > 0 then
+        right = right.Unit
+    end
+
+    -- Roblox MoveDirection is world-relative.
+    -- Convert joystick direction to camera-relative.
+    local x =
+        move:Dot(right)
+
+    local z =
+        move:Dot(forward)
+
+    local direction =
+        right * x +
+        forward * z
+
+    if direction.Magnitude > 1 then
+        direction =
+            direction.Unit
+    end
+
+    return direction
+
+end
+
+--============================================================
+-- ROLL GLOBE
+--============================================================
+
+local function updateGlobe(dt)
 
     if not globeEnabled then
         return
     end
 
-    if not globeCenter then
-        return
-    end
+    local direction =
+        getMovementDirection()
 
-    if #props == 0 then
-        return
-    end
-
-    local move =
-        humanoid.MoveDirection
-
-    --========================================================
-    -- CAMERA RELATIVE MOVEMENT
-    --========================================================
-
-    if move.Magnitude > 0.01 then
-
-        local camForward =
-            camera.CFrame.LookVector
-
-        local camRight =
-            camera.CFrame.RightVector
-
-        -- Flatten camera vectors
-        camForward = Vector3.new(
-            camForward.X,
-            0,
-            camForward.Z
-        )
-
-        camRight = Vector3.new(
-            camRight.X,
-            0,
-            camRight.Z
-        )
-
-        if camForward.Magnitude > 0 then
-            camForward = camForward.Unit
-        end
-
-        if camRight.Magnitude > 0 then
-            camRight = camRight.Unit
-        end
-
-        local desired =
-            camForward * (-move.Z) +
-            camRight * move.X
-
-        if desired.Magnitude > 0.01 then
-            desired = desired.Unit
-        end
+    if direction.Magnitude > 0.01 then
 
         targetVelocity =
-            desired * globeSpeed
+            direction *
+            GLOBE_SPEED
 
     else
 
@@ -372,106 +397,60 @@ local function updateGlobe()
 
     end
 
-    --========================================================
-    -- SMOOTH ACCELERATION
-    --========================================================
-
-    currentVelocity =
-        currentVelocity:Lerp(
+    -- Smooth acceleration
+    velocity =
+        velocity:Lerp(
             targetVelocity,
-            0.15
+            math.clamp(dt * 7, 0, 1)
         )
 
-    local dt = UPDATE_RATE
-
-    local movement =
-        currentVelocity * dt
-
-    globeCenter += movement
+    -- Move globe
+    globeCenter +=
+        velocity * dt
 
     --========================================================
-    -- REALISTIC ROLL DIRECTION
+    -- PHYSICS-LIKE ROLL
     --========================================================
 
-    local flatVelocity =
+    local horizontalVelocity =
         Vector3.new(
-            currentVelocity.X,
+            velocity.X,
             0,
-            currentVelocity.Z
+            velocity.Z
         )
 
-    if flatVelocity.Magnitude > 0.05 then
+    if horizontalVelocity.Magnitude > 0.05 then
 
-        local direction =
-            flatVelocity.Unit
+        local directionUnit =
+            horizontalVelocity.Unit
 
-        local rollAxis =
+        -- Rolling axis perpendicular to movement
+        local axis =
             Vector3.new(
-                direction.Z,
+                -directionUnit.Z,
                 0,
-                -direction.X
+                directionUnit.X
             )
 
-        local angularAmount =
-            flatVelocity.Magnitude /
-            math.max(globeRadius, 0.1)
+        local angle =
+            horizontalVelocity.Magnitude /
+            math.max(GLOBE_RADIUS, 0.1) *
+            dt
 
         globeRotation =
             CFrame.fromAxisAngle(
-                rollAxis,
-                angularAmount * dt
+                axis,
+                angle
             ) *
             globeRotation
-
-    end
-
-    --========================================================
-    -- UPDATE PROPS
-    --========================================================
-
-    for i, prop in ipairs(props) do
-
-        local data =
-            propOffsets[i]
-
-        if data then
-
-            local rotated =
-                globeRotation:
-                VectorToWorldSpace(
-                    data.direction
-                )
-
-            local position =
-                globeCenter +
-                rotated * globeRadius
-
-            local look =
-                CFrame.lookAt(
-                    position,
-                    globeCenter
-                )
-
-            local finalCF =
-                look * data.rotation
-
-            setProp(
-                prop,
-                finalCF
-            )
-
-        end
 
     end
 
 end
 
 --============================================================
--- CAMERA
+-- 360 CAMERA
 --============================================================
-
-local cameraSmooth =
-    CFrame.new()
 
 local function updateCamera(dt)
 
@@ -483,42 +462,248 @@ local function updateCamera(dt)
         return
     end
 
-    -- Normal Roblox-like third person camera
-    local cameraFocus =
-        globeCenter
+    camera.CameraType =
+        Enum.CameraType.Scriptable
+
+    -- Full spherical orbit
+    local yawCF =
+        CFrame.Angles(
+            0,
+            cameraYaw,
+            0
+        )
+
+    local pitchCF =
+        CFrame.Angles(
+            cameraPitch,
+            0,
+            0
+        )
+
+    local rotation =
+        yawCF *
+        pitchCF
 
     local offset =
+        rotation *
         Vector3.new(
             0,
             cameraHeight,
             cameraDistance
         )
 
-    local wantedPosition =
-        cameraFocus + offset
+    local position =
+        globeCenter +
+        offset
 
-    local wantedCF =
+    local lookAt =
+        globeCenter
+
+    local wanted =
         CFrame.lookAt(
-            wantedPosition,
-            cameraFocus
+            position,
+            lookAt
         )
-
-    cameraSmooth =
-        cameraSmooth:Lerp(
-            wantedCF,
-            math.clamp(dt * 8, 0, 1)
-        )
-
-    camera.CameraType =
-        Enum.CameraType.Scriptable
 
     camera.CFrame =
-        cameraSmooth
+        camera.CFrame:Lerp(
+            wanted,
+            math.clamp(
+                dt * 10,
+                0,
+                1
+            )
+        )
 
 end
 
 --============================================================
--- ENABLE GLOBE
+-- TOUCH CAMERA
+--============================================================
+
+local draggingCamera = false
+local lastTouchPosition = nil
+
+UserInputService.TouchStarted:Connect(
+    function(input, processed)
+
+        if processed then
+            return
+        end
+
+        if not cameraEnabled then
+            return
+        end
+
+        draggingCamera = true
+        lastTouchPosition =
+            input.Position
+
+    end
+)
+
+UserInputService.TouchMoved:Connect(
+    function(input, processed)
+
+        if not draggingCamera then
+            return
+        end
+
+        if not cameraEnabled then
+            return
+        end
+
+        if not lastTouchPosition then
+            lastTouchPosition =
+                input.Position
+            return
+        end
+
+        local delta =
+            input.Position -
+            lastTouchPosition
+
+        lastTouchPosition =
+            input.Position
+
+        cameraYaw -=
+            delta.X *
+            CAMERA_SENSITIVITY
+
+        cameraPitch -=
+            delta.Y *
+            CAMERA_SENSITIVITY
+
+        cameraPitch =
+            math.clamp(
+                cameraPitch,
+                CAMERA_MIN_PITCH,
+                CAMERA_MAX_PITCH
+            )
+
+    end
+)
+
+UserInputService.TouchEnded:Connect(
+    function()
+
+        draggingCamera = false
+        lastTouchPosition = nil
+
+    end
+)
+
+--============================================================
+-- MOUSE CAMERA
+--============================================================
+
+local mouseDragging = false
+local lastMousePosition
+
+UserInputService.InputBegan:Connect(
+    function(input)
+
+        if input.UserInputType ==
+            Enum.UserInputType.MouseButton2 then
+
+            mouseDragging = true
+
+            lastMousePosition =
+                UserInputService:GetMouseLocation()
+
+        end
+
+    end
+)
+
+UserInputService.InputChanged:Connect(
+    function(input)
+
+        if not mouseDragging then
+            return
+        end
+
+        if input.UserInputType ~=
+            Enum.UserInputType.MouseMovement then
+            return
+        end
+
+        local position =
+            UserInputService:GetMouseLocation()
+
+        if lastMousePosition then
+
+            local delta =
+                position -
+                lastMousePosition
+
+            cameraYaw -=
+                delta.X *
+                CAMERA_SENSITIVITY
+
+            cameraPitch -=
+                delta.Y *
+                CAMERA_SENSITIVITY
+
+            cameraPitch =
+                math.clamp(
+                    cameraPitch,
+                    CAMERA_MIN_PITCH,
+                    CAMERA_MAX_PITCH
+                )
+
+        end
+
+        lastMousePosition =
+            position
+
+    end
+)
+
+UserInputService.InputEnded:Connect(
+    function(input)
+
+        if input.UserInputType ==
+            Enum.UserInputType.MouseButton2 then
+
+            mouseDragging = false
+
+        end
+
+    end
+)
+
+--============================================================
+-- JUMP
+--============================================================
+
+local function jumpGlobe()
+
+    if not globeEnabled then
+        return
+    end
+
+    globeCenter +=
+        Vector3.new(
+            0,
+            JUMP_POWER * 0.12,
+            0
+        )
+
+end
+
+UserInputService.JumpRequest:Connect(
+    function()
+
+        if globeEnabled then
+            jumpGlobe()
+        end
+
+    end
+)
+
+--============================================================
+-- ENABLE
 --============================================================
 
 local function enableGlobe()
@@ -527,42 +712,21 @@ local function enableGlobe()
         return
     end
 
-    refreshProps()
-    generateOffsets()
-
-    if #props == 0 then
-        return
-    end
-
     globeEnabled = true
 
-    originalPlayerPosition =
-        hrp.CFrame
-
-    globeCenter =
-        hrp.Position
-
-    currentVelocity =
-        Vector3.zero
-
-    targetVelocity =
-        Vector3.zero
-
     buildGlobe()
-
-    print("🌍 Globe enabled")
 
 end
 
 --============================================================
--- DISABLE GLOBE
+-- DISABLE
 --============================================================
 
 local function disableGlobe()
 
     globeEnabled = false
 
-    currentVelocity =
+    velocity =
         Vector3.zero
 
     targetVelocity =
@@ -578,37 +742,15 @@ local function disableGlobe()
     camera.CameraSubject =
         humanoid
 
-    print("🌍 Globe disabled")
-
 end
 
 --============================================================
--- JUMP
---============================================================
-
-local function globeJump()
-
-    if not globeEnabled then
-        return
-    end
-
-    -- Smooth vertical impulse
-    globeCenter +=
-        Vector3.new(
-            0,
-            jumpPower * 0.08,
-            0
-        )
-
-end
-
---============================================================
--- RAYFIELD LOAD
+-- RAYFIELD
 --============================================================
 
 local Rayfield
 
-local success, loaded =
+local loaded, result =
     pcall(function()
 
         return loadstring(
@@ -619,15 +761,12 @@ local success, loaded =
 
     end)
 
-if not success or not loaded then
-
-    warn("❌ Rayfield failed")
-
+if not loaded then
+    warn("❌ Rayfield failed to load")
     return
-
 end
 
-Rayfield = loaded
+Rayfield = result
 
 --============================================================
 -- WINDOW
@@ -642,7 +781,7 @@ local Window =
             "MANI GLOBE",
 
         LoadingSubtitle =
-            "15 Prop Rolling System",
+            "15 Prop Globe",
 
         ConfigurationSaving = {
             Enabled = false
@@ -671,16 +810,14 @@ GlobeTab:CreateSection(
 )
 
 --============================================================
--- MASTER TOGGLE
+-- MASTER
 --============================================================
 
 GlobeTab:CreateToggle({
 
-    Name = "🌍 Globe Controller",
+    Name = "🌍 Globe ON / OFF",
 
     CurrentValue = false,
-
-    Flag = "GlobeController",
 
     Callback = function(value)
 
@@ -695,33 +832,32 @@ GlobeTab:CreateToggle({
 })
 
 --============================================================
--- CAMERA TOGGLE
+-- CAMERA
 --============================================================
 
 GlobeTab:CreateToggle({
 
-    Name = "🎥 Globe Camera",
+    Name = "🎥 360° Globe Camera",
 
     CurrentValue = true,
 
-    Flag = "GlobeCamera",
-
     Callback = function(value)
 
-        cameraEnabled = value
+        cameraEnabled =
+            value
 
-        if not value then
+        if value and globeEnabled then
+
+            camera.CameraType =
+                Enum.CameraType.Scriptable
+
+        else
 
             camera.CameraType =
                 Enum.CameraType.Custom
 
             camera.CameraSubject =
                 humanoid
-
-        elseif globeEnabled then
-
-            camera.CameraType =
-                Enum.CameraType.Scriptable
 
         end
 
@@ -738,24 +874,23 @@ GlobeTab:CreateSlider({
     Name = "⚽ Globe Size",
 
     Range = {
-        3,
-        15
+        4,
+        16
     },
 
     Increment = 0.5,
 
     Suffix = " studs",
 
-    CurrentValue = 6,
-
-    Flag = "GlobeSize",
+    CurrentValue = 8,
 
     Callback = function(value)
 
-        globeRadius = value
+        GLOBE_RADIUS =
+            value
 
         if globeEnabled then
-            buildGlobe()
+            placeGlobe()
         end
 
     end
@@ -768,11 +903,11 @@ GlobeTab:CreateSlider({
 
 GlobeTab:CreateSlider({
 
-    Name = "🏃 Rolling Speed",
+    Name = "🏃 Globe Speed",
 
     Range = {
         5,
-        120
+        150
     },
 
     Increment = 5,
@@ -781,11 +916,10 @@ GlobeTab:CreateSlider({
 
     CurrentValue = 35,
 
-    Flag = "GlobeSpeed",
-
     Callback = function(value)
 
-        globeSpeed = value
+        GLOBE_SPEED =
+            value
 
     end
 
@@ -801,7 +935,7 @@ GlobeTab:CreateSlider({
 
     Range = {
         10,
-        100
+        150
     },
 
     Increment = 5,
@@ -810,11 +944,10 @@ GlobeTab:CreateSlider({
 
     CurrentValue = 50,
 
-    Flag = "JumpPower",
-
     Callback = function(value)
 
-        jumpPower = value
+        JUMP_POWER =
+            value
 
     end
 
@@ -830,20 +963,19 @@ GlobeTab:CreateSlider({
 
     Range = {
         8,
-        40
+        50
     },
 
     Increment = 1,
 
     Suffix = " studs",
 
-    CurrentValue = 18,
-
-    Flag = "CameraDistance",
+    CurrentValue = 20,
 
     Callback = function(value)
 
-        cameraDistance = value
+        cameraDistance =
+            value
 
     end
 
@@ -855,10 +987,10 @@ GlobeTab:CreateSlider({
 
 GlobeTab:CreateSlider({
 
-    Name = "📐 Camera Height",
+    Name = "↕ Camera Height",
 
     Range = {
-        2,
+        -10,
         20
     },
 
@@ -866,13 +998,40 @@ GlobeTab:CreateSlider({
 
     Suffix = " studs",
 
-    CurrentValue = 7,
-
-    Flag = "CameraHeight",
+    CurrentValue = 3,
 
     Callback = function(value)
 
-        cameraHeight = value
+        cameraHeight =
+            value
+
+    end
+
+})
+
+--============================================================
+-- CAMERA SENSITIVITY
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "🎮 Camera Sensitivity",
+
+    Range = {
+        1,
+        10
+    },
+
+    Increment = 1,
+
+    Suffix = "x",
+
+    CurrentValue = 4,
+
+    Callback = function(value)
+
+        CAMERA_SENSITIVITY =
+            value * 0.001
 
     end
 
@@ -884,15 +1043,58 @@ GlobeTab:CreateSlider({
 
 GlobeTab:CreateButton({
 
-    Name = "🔄 Rebuild Globe",
+    Name = "🔄 Rebuild 15-Prop Globe",
+
+    Callback = function()
+
+        refreshProps()
+
+        if #props > 0 then
+
+            generateOffsets = nil
+
+            globeRotation =
+                CFrame.identity
+
+            placeGlobe()
+
+            Rayfield:Notify({
+
+                Title = "🌍 Globe",
+
+                Content =
+                    tostring(#props) ..
+                    " props rebuilt.",
+
+                Duration = 3
+
+            })
+
+        end
+
+    end
+
+})
+--============================================================
+-- CENTER GLOBE
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🎯 Center Globe",
 
     Callback = function()
 
         if globeEnabled then
-            buildGlobe()
-        else
-            refreshProps()
-            generateOffsets()
+
+            globeCenter =
+                hrp.Position
+
+            globeRotation =
+                CFrame.identity
+
+            placeGlobe()
+
         end
 
     end
@@ -900,37 +1102,7 @@ GlobeTab:CreateButton({
 })
 
 --============================================================
--- REFRESH
---============================================================
-
-GlobeTab:CreateButton({
-
-    Name = "🔍 Refresh Props",
-
-    Callback = function()
-
-        refreshProps()
-        generateOffsets()
-
-        Rayfield:Notify({
-
-            Title = "🌍 Globe",
-
-            Content =
-                "Found " ..
-                tostring(#props) ..
-                " props.",
-
-            Duration = 3
-
-        })
-
-    end
-
-})
-
---============================================================
--- RESET
+-- RESET CAMERA
 --============================================================
 
 GlobeTab:CreateButton({
@@ -939,13 +1111,8 @@ GlobeTab:CreateButton({
 
     Callback = function()
 
-        camera.CameraType =
-            Enum.CameraType.Custom
-
-        camera.CameraSubject =
-            humanoid
-
-        cameraEnabled = false
+        cameraYaw = 0
+        cameraPitch = math.rad(15)
 
     end
 
@@ -967,99 +1134,91 @@ InfoTab:CreateSection(
 
 InfoTab:CreateParagraph({
 
-    Title = "🌍 How to use",
+    Title = "🌍 15-Prop Globe",
 
     Content =
-        "1. Turn Globe Controller ON.\n\n" ..
-        "2. Use the normal Roblox mobile joystick.\n\n" ..
-        "3. Movement is camera-relative, so the globe can travel in 360° directions.\n\n" ..
-        "4. Change Globe Size / Speed / Jump.\n\n" ..
-        "5. Globe Camera gives a third-person globe-following view."
+        "• 15 props are distributed around a spherical surface.\n\n" ..
+        "• Roblox joystick controls the globe.\n\n" ..
+        "• Movement is camera-relative and supports 360° directions.\n\n" ..
+        "• Drag the screen to orbit the camera around the globe.\n\n" ..
+        "• Globe size, speed and jump are adjustable.\n\n" ..
+        "• Globe Camera provides a third-person orbit view."
 
 })
-
---============================================================
--- INPUT
---============================================================
-
-UserInputService.JumpRequest:Connect(function()
-
-    if globeEnabled then
-        globeJump()
-    end
-
-end)
-
 --============================================================
 -- MAIN LOOP
 --============================================================
 
-RunService.RenderStepped:Connect(function(dt)
+RunService.RenderStepped:Connect(
+    function(dt)
 
-    if not globeEnabled then
-        return
+        if not globeEnabled then
+            return
+        end
+
+        updateGlobe(dt)
+
+        updateCamera(dt)
+
+        updateTimer += dt
+
+        if updateTimer >= UPDATE_INTERVAL then
+
+            updateTimer = 0
+
+            placeGlobe()
+
+        end
+
     end
-
-    updateAccumulator += dt
-
-    -- Keep updates consistent
-    if updateAccumulator >= UPDATE_RATE then
-
-        updateAccumulator = 0
-
-        updateGlobe()
-
-    end
-
-    updateCamera(dt)
-
-end)
+)
 
 --============================================================
 -- CHARACTER RESPAWN
 --============================================================
 
-player.CharacterAdded:Connect(function(newCharacter)
+player.CharacterAdded:Connect(
+    function(newCharacter)
 
-    character = newCharacter
+        character =
+            newCharacter
 
-    humanoid =
-        character:WaitForChild(
-            "Humanoid"
-        )
+        humanoid =
+            character:WaitForChild(
+                "Humanoid"
+            )
 
-    hrp =
-        character:WaitForChild(
-            "HumanoidRootPart"
-        )
+        hrp =
+            character:WaitForChild(
+                "HumanoidRootPart"
+            )
 
-    if globeEnabled then
+        if globeEnabled then
 
-        humanoid.WalkSpeed = 0
-        humanoid.JumpPower = 0
-        humanoid.AutoRotate = false
+            humanoid.WalkSpeed = 0
+            humanoid.JumpPower = 0
+            humanoid.AutoRotate = false
+
+        end
 
     end
-
-end)
-
---============================================================
--- START
---============================================================
+)
 
 Rayfield:Notify({
 
     Title = "🌍 MANI GLOBE",
 
     Content =
-        "15-prop globe controller loaded!",
+        "15-prop 360° globe controller ready!",
 
     Duration = 4
 
 })
 
 print("======================================")
-print("🌍 MANI GLOBE V2 LOADED")
-print("Props:", #props)
-print("Camera-relative 360° movement: ON")
+print("🌍 MANI GLOBE V3")
+print("15 PROP SPHERE: READY")
+print("360 CAMERA: READY")
+print("CAMERA RELATIVE MOVEMENT: READY")
 print("======================================")
+
