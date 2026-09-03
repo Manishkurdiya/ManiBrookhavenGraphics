@@ -1480,4 +1480,121 @@ GlobeTab:CreateButton({
     end
 
 })
+--============================================================
+-- INFO
+--============================================================
+
+local InfoTab =
+    Window:CreateTab(
+        "ℹ Info",
+        4483362458
+    )
+
+InfoTab:CreateSection(
+    "🌍 Globe Physics"
+)
+
+InfoTab:CreateParagraph({
+
+    Title =
+        "How it works",
+
+    Content =
+        "🌍 15 props form a spherical globe.\n\n" ..
+        "🎮 Normal Roblox joystick controls the globe relative to the camera.\n\n" ..
+        "🎥 Drag the screen to freely orbit around the globe.\n\n" ..
+        "⬇ Gravity pulls the globe down when airborne.\n\n" ..
+        "🧱 Ground detection prevents the globe from falling through the floor.\n\n" ..
+        "🚀 Jump gives the globe upward velocity and gravity brings it back down.\n\n" ..
+        "⚽ Rolling rotation follows the direction of travel."
+
+})
+
+--============================================================
+-- PHYSICS LOOP
+--============================================================
+
+local PropUpdateTimer = 0
+local PROP_UPDATE_RATE = 1 / 15
+
+RunService.RenderStepped:Connect(
+    function(dt)
+
+        if not GlobeEnabled then
+            return
+        end
+
+        UpdatePhysics(dt)
+
+        PropUpdateTimer += dt
+
+        if PropUpdateTimer >=
+            PROP_UPDATE_RATE then
+
+            PropUpdateTimer = 0
+
+            UpdateProps()
+
+        end
+
+        UpdateCamera(dt)
+
+    end
+)
+--============================================================
+-- CHARACTER RESPAWN
+--============================================================
+
+Player.CharacterAdded:Connect(
+    function(NewCharacter)
+
+        Character =
+            NewCharacter
+
+        Humanoid =
+            Character:WaitForChild(
+                "Humanoid"
+            )
+
+        HRP =
+            Character:WaitForChild(
+                "HumanoidRootPart"
+            )
+
+        if GlobeEnabled then
+
+            Humanoid.WalkSpeed = 0
+            Humanoid.JumpPower = 0
+            Humanoid.AutoRotate = false
+
+        end
+
+    end
+)
+
+--============================================================
+-- READY
+--============================================================
+
+Rayfield:Notify({
+
+    Title =
+        "🌍 MANI GLOBE V4",
+
+    Content =
+        "Gravity + 360° camera + smart control ready!",
+
+    Duration = 5
+
+})
+
+print("==============================")
+print("🌍 MANI GLOBE V4")
+print("15 PROPS: READY")
+print("GRAVITY: ON")
+print("GROUND DETECTION: ON")
+print("360 CAMERA: ON")
+print("SMART JOYSTICK: ON")
+print("==============================")
+
 
