@@ -517,59 +517,70 @@ end
 --============================================================
 
 local function GetMoveDirection()
+    local humanoid = Humanoid
+    local camera = workspace.CurrentCamera
 
-    local Move =
-        Humanoid.MoveDirection
-
-    if Move.Magnitude < 0.01 then
-
+    if not humanoid or not camera then
         return Vector3.zero
-
     end
 
-    -- Camera vectors
-    local Forward =
-        Camera.CFrame.LookVector
+    -- Roblox mobile joystick movement
+    local joystickDirection = humanoid.MoveDirection
 
-    local Right =
-        Camera.CFrame.RightVector
-
-    -- Flatten
-    Forward =
-        Vector3.new(
-            Forward.X,
-            0,
-            Forward.Z
-        )
-
-    Right =
-        Vector3.new(
-            Right.X,
-            0,
-            Right.Z
-        )
-
-    if Forward.Magnitude > 0 then
-        Forward = Forward.Unit
+    if joystickDirection.Magnitude < 0.01 then
+        return Vector3.zero
     end
 
-    if Right.Magnitude > 0 then
-        Right = Right.Unit
+    -- Camera forward direction
+    local cameraForward = camera.CFrame.LookVector
+    cameraForward = Vector3.new(
+        cameraForward.X,
+        0,
+        cameraForward.Z
+    )
+
+    -- Camera right direction
+    local cameraRight = camera.CFrame.RightVector
+    cameraRight = Vector3.new(
+        cameraRight.X,
+        0,
+        cameraRight.Z
+    )
+
+    -- Safety
+    if cameraForward.Magnitude < 0.01 then
+        return Vector3.zero
     end
 
-    -- Mobile joystick direction
-    local Direction =
-        Right * Move.X +
-        Forward * Move.Z
-
-    if Direction.Magnitude > 1 then
-        Direction =
-            Direction.Unit
+    if cameraRight.Magnitude < 0.01 then
+        return Vector3.zero
     end
 
-    return Direction
+    cameraForward = cameraForward.Unit
+    cameraRight = cameraRight.Unit
 
+    -- Convert joystick input to camera-relative direction
+    local forwardAmount = joystickDirection:Dot(cameraForward)
+    local rightAmount = joystickDirection:Dot(cameraRight)
+
+    -- IMPORTANT:
+    -- Forward joystick = Globe forward
+    -- Back joystick    = Globe backward
+    -- Left joystick    = Globe left
+    -- Right joystick   = Globe right
+    local movement =
+        (cameraForward * forwardAmount)
+        + (cameraRight * rightAmount)
+
+    if movement.Magnitude < 0.01 then
+        return Vector3.zero
+    end
+
+    return movement.Unit
 end
+
+
+    
 
 --============================================================
 -- PHYSICS
