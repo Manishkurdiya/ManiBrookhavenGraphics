@@ -1111,4 +1111,373 @@ if not Success or not Result then
 end
 
 Rayfield = Result
+--============================================================
+-- WINDOW
+--============================================================
+
+local Window =
+    Rayfield:CreateWindow({
+
+        Name = "MANI GLOBE",
+
+        LoadingTitle =
+            "MANI GLOBE",
+
+        LoadingSubtitle =
+            "15 Prop Gravity Ball",
+
+        ConfigurationSaving = {
+            Enabled = false
+        },
+
+        Discord = {
+            Enabled = false
+        },
+
+        KeySystem = false
+
+    })
+
+--============================================================
+-- GLOBE TAB
+--============================================================
+
+local GlobeTab =
+    Window:CreateTab(
+        "🌍 Globe",
+        4483362458
+    )
+
+GlobeTab:CreateSection(
+    "Globe Controller"
+)
+--============================================================
+-- ON / OFF
+--============================================================
+
+GlobeTab:CreateToggle({
+
+    Name = "🌍 Globe ON / OFF",
+
+    CurrentValue = false,
+
+    Callback = function(Value)
+
+        if Value then
+
+            EnableGlobe()
+
+        else
+
+            DisableGlobe()
+
+        end
+
+    end
+
+})
+
+--============================================================
+-- CAMERA
+--============================================================
+
+GlobeTab:CreateToggle({
+
+    Name = "🎥 360° Globe Camera",
+
+    CurrentValue = true,
+
+    Callback = function(Value)
+
+        CameraEnabled = Value
+
+        if Value and GlobeEnabled then
+
+            Camera.CameraType =
+                Enum.CameraType.Scriptable
+
+        else
+
+            Camera.CameraType =
+                Enum.CameraType.Custom
+
+            Camera.CameraSubject =
+                Humanoid
+
+        end
+
+    end
+
+})
+--============================================================
+-- SIZE
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "⚽ Globe Size",
+
+    Range = {
+        4,
+        18
+    },
+
+    Increment = 0.5,
+
+    Suffix = " studs",
+
+    CurrentValue = 8,
+
+    Callback = function(Value)
+
+        GlobeRadius = Value
+
+        if GlobeEnabled then
+
+            UpdateGround()
+            UpdateProps()
+
+        end
+
+    end
+
+})
+
+--============================================================
+-- SPEED
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "⚡ Rolling Speed",
+
+    Range = {
+        5,
+        150
+    },
+
+    Increment = 5,
+
+    Suffix = " studs/s",
+
+    CurrentValue = 35,
+
+    Callback = function(Value)
+
+        GlobeSpeed = Value
+
+    end
+
+})
+--============================================================
+-- JUMP
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "🚀 Jump Power",
+
+    Range = {
+        10,
+        120
+    },
+
+    Increment = 5,
+
+    Suffix = " power",
+
+    CurrentValue = 55,
+
+    Callback = function(Value)
+
+        JumpPower = Value
+
+    end
+
+})
+
+--============================================================
+-- CAMERA DISTANCE
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "📷 Camera Distance",
+
+    Range = {
+        8,
+        50
+    },
+
+    Increment = 1,
+
+    Suffix = " studs",
+
+    CurrentValue = 20,
+
+    Callback = function(Value)
+
+        CameraDistance = Value
+
+    end
+
+})
+--============================================================
+-- CAMERA HEIGHT
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "↕ Camera Height",
+
+    Range = {
+        -10,
+        25
+    },
+
+    Increment = 1,
+
+    Suffix = " studs",
+
+    CurrentValue = 4,
+
+    Callback = function(Value)
+
+        CameraHeight = Value
+
+    end
+
+})
+
+--============================================================
+-- CAMERA SENSITIVITY
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "🎮 Camera Sensitivity",
+
+    Range = {
+        1,
+        10
+    },
+
+    Increment = 1,
+
+    Suffix = "x",
+
+    CurrentValue = 4,
+
+    Callback = function(Value)
+
+        CameraSensitivity =
+            Value * 0.001
+
+    end
+
+})
+--============================================================
+-- CAMERA SMOOTHNESS
+--============================================================
+
+GlobeTab:CreateSlider({
+
+    Name = "✨ Camera Smoothness",
+
+    Range = {
+        3,
+        20
+    },
+
+    Increment = 1,
+
+    Suffix = "x",
+
+    CurrentValue = 10,
+
+    Callback = function(Value)
+
+        CameraSmoothness =
+            Value
+
+    end
+
+})
+
+--============================================================
+-- REBUILD
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🔄 Rebuild Globe",
+
+    Callback = function()
+
+        if GlobeEnabled then
+
+            BuildGlobe()
+
+            Rayfield:Notify({
+
+                Title =
+                    "🌍 Globe",
+
+                Content =
+                    "15-prop globe rebuilt.",
+
+                Duration = 3
+
+            })
+
+        end
+
+    end
+
+})
+--============================================================
+-- CENTER
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🎯 Reset Globe Position",
+
+    Callback = function()
+
+        if GlobeEnabled then
+
+            GlobeCenter =
+                HRP.Position
+
+            VerticalVelocity = 0
+
+            HorizontalVelocity =
+                Vector3.zero
+
+            UpdateGround()
+            UpdateProps()
+
+        end
+
+    end
+
+})
+
+--============================================================
+-- RESET CAMERA
+--============================================================
+
+GlobeTab:CreateButton({
+
+    Name = "🎥 Reset 360° Camera",
+
+    Callback = function()
+
+        CameraYaw = 0
+        CameraPitch = math.rad(15)
+
+    end
+
+})
 
